@@ -1,6 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useContext } from "react";
+import { AuthContext } from "./AuthContext";
 
 export default function Home() {
+  const { user, logout } = useContext(AuthContext);
   const [contracts, setContracts] = useState([]);
 
   useEffect(() => {
@@ -29,16 +31,37 @@ export default function Home() {
         color: "white",
       }}
     >
-      <h1
+      <div
         style={{
-          color: "#8b5cf6",
-          fontSize: "28px",
-          fontWeight: "600",
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
           marginBottom: "24px",
         }}
       >
-        Home
-      </h1>
+        <h1
+          style={{
+            color: "#8b5cf6",
+            fontSize: "28px",
+            fontWeight: "600",
+            margin: 0,
+          }}
+        >
+          Home
+        </h1>
+
+        <div>
+          <p style={{ margin: "0 0 8px 0" }}>
+            Logged in as: <strong>{user?.username}</strong>
+          </p>
+          <button
+            onClick={logout}
+            style={{ padding: "8px 16px", cursor: "pointer" }}
+          >
+            Logout
+          </button>
+        </div>
+      </div>
 
       {contracts.length === 0 ? (
         <p style={{ color: "rgba(255,255,255,0.5)" }}>No contracts yet.</p>
