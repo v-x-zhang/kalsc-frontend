@@ -1,7 +1,7 @@
 import { useEffect, useState, useContext } from "react";
 import { AuthContext } from "./AuthContext";
 
-export default function Home() {
+export default function Home({ onSelectContract }) {
   const { user, logout } = useContext(AuthContext);
   const [contracts, setContracts] = useState([]);
 
@@ -77,6 +77,7 @@ export default function Home() {
     {contracts.map((contract) => (
   <div
     key={contract.contract_id}
+    onClick={() => onSelectContract(contract.contract_id)}
     style={{
       backgroundColor: "#1a1625",
       borderRadius: "18px",
