@@ -7,122 +7,70 @@ export default function Register({ onSwitchToLogin }) {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [email, setEmail] = useState("");
-  const [balance, setBalance] = useState("");
+  const [balance, setBalance] = useState("100");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
-
-    if (!username.trim() || !password.trim() || !email.trim() || !balance) {
-      setError("All fields are required");
-      return;
-    }
-
-    if (password !== confirmPassword) {
-      setError("Passwords do not match");
-      return;
-    }
-
-    if (password.length < 6) {
-      setError("Password must be at least 6 characters");
-      return;
-    }
-
-    if (!email.includes("@")) {
-      setError("Please enter a valid email");
-      return;
-    }
-
+    if (!username.trim() || !password.trim() || !email.trim() || !balance) return setError("All fields are required");
+    if (password !== confirmPassword) return setError("Passwords do not match");
+    if (password.length < 6) return setError("Password must be at least 6 characters");
+    if (!email.includes("@")) return setError("Please enter a valid email");
     const balanceNum = parseFloat(balance);
-    if (isNaN(balanceNum) || balanceNum < 0) {
-      setError("Please enter a valid balance");
-      return;
-    }
+    if (isNaN(balanceNum) || balanceNum < 0) return setError("Please enter a valid balance");
 
     setLoading(true);
     const result = await register(username, password, balanceNum, email);
     setLoading(false);
-
-    if (!result.success) {
-      setError(result.error);
-    }
+    if (!result.success) setError(result.error);
   };
 
   return (
-    <div style={{ maxWidth: "400px", margin: "50px auto", padding: "20px" }}>
-      <h1>Register</h1>
+    <>
+      <h1>Create account.</h1>
+      <p className="sub">Get virtual play money and start predicting.</p>
+
       <form onSubmit={handleSubmit}>
-        <div style={{ marginBottom: "15px" }}>
-          <label>
-            Username:
-            <input
-              type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              style={{ display: "block", width: "100%", padding: "8px", marginTop: "5px" }}
-            />
-          </label>
+        <div className="ksc-auth-field">
+          <label>Username</label>
+          <input className="ksc-input" type="text" value={username} onChange={(e) => setUsername(e.target.value)} placeholder="trader42" />
         </div>
-        <div style={{ marginBottom: "15px" }}>
-          <label>
-            Email:
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              style={{ display: "block", width: "100%", padding: "8px", marginTop: "5px" }}
-            />
-          </label>
+
+        <div className="ksc-auth-field">
+          <label>Email</label>
+          <input className="ksc-input" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" />
         </div>
-        <div style={{ marginBottom: "15px" }}>
-          <label>
-            Initial Balance:
-            <input
-              type="number"
-              value={balance}
-              onChange={(e) => setBalance(e.target.value)}
-              style={{ display: "block", width: "100%", padding: "8px", marginTop: "5px" }}
-            />
-          </label>
+
+        <div className="ksc-auth-field">
+          <label>Starting balance (¢)</label>
+          <input className="ksc-input" type="number" value={balance} onChange={(e) => setBalance(e.target.value)} placeholder="100" />
         </div>
-        <div style={{ marginBottom: "15px" }}>
-          <label>
-            Password:
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              style={{ display: "block", width: "100%", padding: "8px", marginTop: "5px" }}
-            />
-          </label>
+
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+          <div className="ksc-auth-field">
+            <label>Password</label>
+            <input className="ksc-input" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" />
+          </div>
+          <div className="ksc-auth-field">
+            <label>Confirm</label>
+            <input className="ksc-input" type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="••••••••" />
+          </div>
         </div>
-        <div style={{ marginBottom: "15px" }}>
-          <label>
-            Confirm Password:
-            <input
-              type="password"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              style={{ display: "block", width: "100%", padding: "8px", marginTop: "5px" }}
-            />
-          </label>
-        </div>
-        {error && <p style={{ color: "red", marginBottom: "15px" }}>{error}</p>}
-        <button type="submit" disabled={loading} style={{ width: "100%", padding: "10px" }}>
-          {loading ? "Registering..." : "Register"}
+
+        {error && <div className="ksc-auth-error">{error}</div>}
+
+        <button type="submit" disabled={loading} className="ksc-btn ksc-btn-primary" style={{ width: "100%", padding: "13px", fontSize: 14, fontWeight: 800 }}>
+          {loading ? <span className="ksc-spinner" /> : null}
+          {loading ? "Creating account…" : "Create account"}
         </button>
       </form>
-      <p style={{ marginTop: "15px", textAlign: "center" }}>
+
+      <p className="ksc-auth-switch">
         Already have an account?{" "}
-        <button
-          onClick={onSwitchToLogin}
-          style={{ background: "none", border: "none", color: "blue", cursor: "pointer" }}
-        >
-          Login here
-        </button>
+        <button onClick={onSwitchToLogin} className="ksc-link-btn">Sign in</button>
       </p>
-    </div>
+    </>
   );
 }

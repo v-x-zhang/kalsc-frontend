@@ -11,61 +11,53 @@ export default function Login({ onSwitchToRegister }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
-
-    if (!username.trim() || !password.trim()) {
-      setError("Username and password are required");
-      return;
-    }
-
+    if (!username.trim() || !password.trim()) return setError("Username and password are required");
     setLoading(true);
     const result = await login(username, password);
     setLoading(false);
-
-    if (!result.success) {
-      setError(result.error);
-    }
+    if (!result.success) setError(result.error);
   };
 
   return (
-    <div style={{ maxWidth: "400px", margin: "50px auto", padding: "20px" }}>
-      <h1>Login</h1>
+    <>
+      <h1>Welcome back.</h1>
+      <p className="sub">Sign in to start trading on what comes next.</p>
+
       <form onSubmit={handleSubmit}>
-        <div style={{ marginBottom: "15px" }}>
-          <label>
-            Username:
-            <input
-              type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              style={{ display: "block", width: "100%", padding: "8px", marginTop: "5px" }}
-            />
-          </label>
+        <div className="ksc-auth-field">
+          <label>Username</label>
+          <input
+            className="ksc-input"
+            type="text"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            placeholder="username"
+            autoFocus
+          />
         </div>
-        <div style={{ marginBottom: "15px" }}>
-          <label>
-            Password:
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              style={{ display: "block", width: "100%", padding: "8px", marginTop: "5px" }}
-            />
-          </label>
+        <div className="ksc-auth-field">
+          <label>Password</label>
+          <input
+            className="ksc-input"
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="••••••••"
+          />
         </div>
-        {error && <p style={{ color: "red", marginBottom: "15px" }}>{error}</p>}
-        <button type="submit" disabled={loading} style={{ width: "100%", padding: "10px" }}>
-          {loading ? "Logging in..." : "Login"}
+
+        {error && <div className="ksc-auth-error">{error}</div>}
+
+        <button type="submit" disabled={loading} className="ksc-btn ksc-btn-primary" style={{ width: "100%", padding: "13px", fontSize: 14, fontWeight: 800 }}>
+          {loading ? <span className="ksc-spinner" /> : null}
+          {loading ? "Signing in…" : "Sign in"}
         </button>
       </form>
-      <p style={{ marginTop: "15px", textAlign: "center" }}>
-        Don't have an account?{" "}
-        <button
-          onClick={onSwitchToRegister}
-          style={{ background: "none", border: "none", color: "blue", cursor: "pointer" }}
-        >
-          Register here
-        </button>
+
+      <p className="ksc-auth-switch">
+        New to KalSC?{" "}
+        <button onClick={onSwitchToRegister} className="ksc-link-btn">Create an account</button>
       </p>
-    </div>
+    </>
   );
 }
