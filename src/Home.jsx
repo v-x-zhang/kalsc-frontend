@@ -1,6 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useContext } from "react";
+import { AuthContext } from "./AuthContext";
 
-export default function Home() {
+export default function Home({ onSelectContract }) {
+  const { user, logout } = useContext(AuthContext);
   const [contracts, setContracts] = useState([]);
 
   useEffect(() => {
@@ -31,7 +33,8 @@ export default function Home() {
       <div
         style={{
           display: "flex",
-          justifyContent: "center",
+          justifyContent: "space-between",
+          alignItems: "center",
           marginBottom: "36px",
         }}
       >
@@ -41,14 +44,25 @@ export default function Home() {
             fontSize: "42px",
             letterSpacing: "1.5px",
             margin: 0,
-            background:
-              "linear-gradient(180deg, #741BC1, #322B8E, #001897)",
+            background: "linear-gradient(180deg, #741BC1, #322B8E, #001897)",
             WebkitBackgroundClip: "text",
             WebkitTextFillColor: "transparent",
           }}
         >
           KalSC
         </h1>
+
+        <div style={{ textAlign: "right" }}>
+          <p style={{ margin: "0 0 8px 0", color: "#f3f4f6" }}>
+            Logged in as: <strong>{user?.username}</strong>
+          </p>
+          <button
+            onClick={logout}
+            style={{ padding: "8px 16px", cursor: "pointer" }}
+          >
+            Logout
+          </button>
+        </div>
       </div>
 
       {contracts.length === 0 ? (
@@ -68,6 +82,7 @@ export default function Home() {
           {contracts.map((contract) => (
             <div
               key={contract.contract_id}
+              onClick={() => onSelectContract(contract.contract_id)}
               style={{
                 backgroundColor: "#14121b",
                 borderRadius: "18px",
