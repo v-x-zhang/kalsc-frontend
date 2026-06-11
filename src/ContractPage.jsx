@@ -27,27 +27,27 @@ function useAnimatedNumber(target, duration = 500) {
 }
 
 /* ---------- price chart ---------- */
-function PriceChart({ trades, height = 220 }) {
+function PriceChart({ points, height = 220 }) {
   const W = 720, H = height, PX = 14, PY = 14;
 
-  if (!trades || trades.length === 0) {
+  if (!points || points.length === 0) {
     return (
       <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height, color: "var(--text-faint)", fontSize: 14 }}>
-        No trades yet — be the first.
+        Mid-price history is building...
       </div>
     );
   }
 
-  const prices = trades.map((t) => t.price);
+  const prices = points.map((p) => p.price);
   const min = Math.min(...prices), max = Math.max(...prices);
   const range = (max - min) || 1;
   const padR = range * 0.15;
   const lo = Math.max(0, min - padR), hi = Math.min(100, max + padR);
   const innerW = W - PX * 2, innerH = H - PY * 2;
 
-  const pts = trades.map((t, i) => {
-    const x = PX + (i / Math.max(trades.length - 1, 1)) * innerW;
-    const y = PY + (1 - (t.price - lo) / (hi - lo)) * innerH;
+  const pts = points.map((p, i) => {
+    const x = PX + (i / Math.max(points.length - 1, 1)) * innerW;
+    const y = PY + (1 - (p.price - lo) / (hi - lo)) * innerH;
     return [x, y];
   });
 
@@ -75,7 +75,7 @@ function PriceChart({ trades, height = 220 }) {
           {isUp ? "▲" : "▼"} {Math.abs(delta).toFixed(2)} ({deltaPct.toFixed(1)}%)
         </div>
         <div style={{ marginLeft: "auto", fontSize: 12, color: "var(--text-faint)" }}>
-          {trades.length} trade{trades.length !== 1 ? "s" : ""}
+          {points.length} sample{points.length !== 1 ? "s" : ""}
         </div>
       </div>
       <svg viewBox={`0 0 ${W} ${H}`} style={{ width: "100%", height: H, display: "block" }}>
@@ -185,12 +185,12 @@ export default function ContractPage({ contractId, onBack, activeTab, onChangeTa
   const { user, logout } = useContext(AuthContext);
   const [contract, setContract] = useState(null);
   const [trades, setTrades] = useState([]);
+  const [midHistory, setMidHistory] = useState([]);
   const [orderbook, setOrderbook] = useState({ bids: [], asks: [] });
   const [form, setForm] = useState({ side: "YES", direction: "BUY", order_type: "LIMIT", price: "", quantity: "" });
   const [status, setStatus] = useState(null);
   const [submitting, setSubmitting] = useState(false);
-  const [lastPrice, setLastPrice] = useState(null);
-  const [priceFlash, setPriceFlash] = useState("");
+  const lastMidRef = useRef(null);
 
   const load = async () => {
     try {
@@ -199,17 +199,25 @@ export default function ContractPage({ contractId, onBack, activeTab, onChangeTa
         fetch(`/api/contracts/${contractId}/trades`),
         fetch(`/api/contracts/${contractId}/orderbook`),
       ]);
-      if (cRes.ok) setContract(await cRes.json());
+      if (cRes.ok) {
+        const c = await cRes.json();
+        setContract(c);
+        if (c?.yes_mid != null) {
+          const mid = Number(c.yes_mid);
+          if (!Number.isNaN(mid)) {
+            const prevMid = lastMidRef.current;
+            lastMidRef.current = mid;
+            setMidHistory((prev) => {
+              const next = [...prev, { timestamp: Date.now(), price: mid }];
+              return next.length > 300 ? next.slice(next.length - 300) : next;
+            });
+          }
+        }
+      }
       if (tRes.ok) {
         const d = await tRes.json();
         const arr = Array.isArray(d) ? d : [];
         setTrades(arr);
-        const last = arr.length ? arr[arr.length - 1].price : null;
-        if (last != null && lastPrice != null && last !== lastPrice) {
-          setPriceFlash(last > lastPrice ? "ksc-flash-up" : "ksc-flash-down");
-          setTimeout(() => setPriceFlash(""), 900);
-        }
-        if (last != null) setLastPrice(last);
       }
       if (oRes.ok) setOrderbook(await oRes.json());
     } catch (err) {
@@ -264,7 +272,9 @@ export default function ContractPage({ contractId, onBack, activeTab, onChangeTa
     setSubmitting(false);
   };
 
-  const isOpen = contract?.is_open !== false;
+  const contractStatus = contract?.status ?? (contract?.is_open !== false ? "open" : "closed");
+  const isOpen = contractStatus === "open";
+  const isUpcoming = contractStatus === "upcoming";
   const estCost =
     form.order_type === "LIMIT" && form.price && form.quantity
       ? parseFloat(form.price) * parseInt(form.quantity, 10)
@@ -325,12 +335,12 @@ export default function ContractPage({ contractId, onBack, activeTab, onChangeTa
           {/* Chart */}
           <div className="ksc-card ksc-fade-up">
             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 12 }}>
-              <div className="ksc-section-label">Price History</div>
+              <div className="ksc-section-label">Mid Price History</div>
               <div className="ksc-section-label" style={{ display: "flex", alignItems: "center", gap: 6 }}>
                 <span className="ksc-live-dot" /> Live · 3s
               </div>
             </div>
-            <PriceChart trades={trades} />
+            <PriceChart points={midHistory} />
           </div>
 
           {/* Order book */}
@@ -436,11 +446,11 @@ export default function ContractPage({ contractId, onBack, activeTab, onChangeTa
               <span style={{ fontWeight: 800, fontSize: 13, letterSpacing: 0.03 }}>Place Order</span>
               <span className="ksc-mono" style={{
                 fontSize: 10, padding: "3px 8px", borderRadius: 20,
-                background: isOpen ? "rgba(74,222,128,0.12)" : "rgba(255,255,255,0.06)",
-                color: isOpen ? "#4ade80" : "var(--text-faint)",
-                border: `1px solid ${isOpen ? "rgba(74,222,128,0.25)" : "rgba(255,255,255,0.1)"}`,
+                background: isOpen ? "rgba(74,222,128,0.12)" : isUpcoming ? "rgba(99,102,241,0.12)" : "rgba(255,255,255,0.06)",
+                color: isOpen ? "#4ade80" : isUpcoming ? "#818cf8" : "var(--text-faint)",
+                border: `1px solid ${isOpen ? "rgba(74,222,128,0.25)" : isUpcoming ? "rgba(99,102,241,0.3)" : "rgba(255,255,255,0.1)"}`,
               }}>
-                {isOpen ? "● OPEN" : "● CLOSED"}
+                {isOpen ? "● OPEN" : isUpcoming ? "● UPCOMING" : "● CLOSED"}
               </span>
             </div>
 
@@ -585,8 +595,8 @@ export default function ContractPage({ contractId, onBack, activeTab, onChangeTa
             </button>
 
             {!isOpen && (
-              <div style={{ marginTop: 10, fontSize: 12, color: "#fca5a5", textAlign: "center" }}>
-                This contract is closed
+              <div style={{ marginTop: 10, fontSize: 12, color: isUpcoming ? "#a5b4fc" : "#fca5a5", textAlign: "center" }}>
+                {isUpcoming ? "Trading opens when this market goes live" : "This contract is closed"}
               </div>
             )}
 

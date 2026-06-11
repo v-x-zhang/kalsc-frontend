@@ -10,7 +10,24 @@ export function AuthProvider({ children }) {
     const storedUser = localStorage.getItem("user");
     if (storedUser) {
       try {
-        setUser(JSON.parse(storedUser));
+        const parsed = JSON.parse(storedUser);
+        // Validate the stored user still exists in the DB before trusting it.
+        fetch(`/api/users/${parsed.user_id}`)
+          .then((res) => {
+            if (res.ok) return res.json();
+            throw new Error("stale");
+          })
+          .then((fresh) => {
+            // Refresh balance/email from server in case they changed.
+            const merged = { ...parsed, ...fresh };
+            setUser(merged);
+            localStorage.setItem("user", JSON.stringify(merged));
+          })
+          .catch(() => {
+            localStorage.removeItem("user");
+          })
+          .finally(() => setLoading(false));
+        return;
       } catch (err) {
         console.error("Failed to parse stored user:", err);
         localStorage.removeItem("user");

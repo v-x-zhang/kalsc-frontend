@@ -98,10 +98,12 @@ function Counter({ value, suffix = "", decimals = 0 }) {
 function ContractCard({ c, onSelect, prevYes }) {
   const yes = c.yes_mid ?? null;
   const no = c.no_mid ?? null;
-  const isOpen = c.is_open !== false;
+  const status = c.status ?? (c.is_open !== false ? "open" : "closed");
+  const isOpen = status === "open";
+  const isUpcoming = status === "upcoming";
 
   const flashClass =
-    prevYes != null && yes != null
+    isOpen && prevYes != null && yes != null
       ? yes > prevYes ? "ksc-flash-up"
       : yes < prevYes ? "ksc-flash-down"
       : ""
@@ -109,15 +111,16 @@ function ContractCard({ c, onSelect, prevYes }) {
 
   return (
     <div
-      className={`ksc-card interactive ksc-fade-up ${flashClass}`}
+      className={`ksc-card ksc-fade-up ${isOpen ? "interactive" : ""} ${flashClass}`}
       onClick={() => isOpen && onSelect(c.contract_id)}
-      style={{ minHeight: 252, display: "flex", flexDirection: "column", gap: 14 }}
+      style={{ minHeight: 252, display: "flex", flexDirection: "column", gap: 14,
+               opacity: isUpcoming ? 0.72 : 1 }}
     >
       <div style={{ minWidth: 0 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-          <span className={`ksc-tag ${isOpen ? "open" : "closed"}`}>
+          <span className={`ksc-tag ${status}`}>
             {isOpen && <span className="ksc-live-dot" style={{ width: 6, height: 6 }} />}
-            {isOpen ? "Live" : "Closed"}
+            {isOpen ? "Live" : isUpcoming ? "Upcoming" : "Closed"}
           </span>
           <span className="ksc-section-label">#{c.contract_id}</span>
         </div>
@@ -131,10 +134,17 @@ function ContractCard({ c, onSelect, prevYes }) {
       </div>
 
       <div style={{ margin: "0 -4px" }}>
-        <Sparkline seed={c.contract_id || 1} target={yes ?? 50} color="#a78bfa" />
+        <Sparkline seed={c.contract_id || 1} target={yes ?? 50} color={isUpcoming ? "#6b7280" : "#a78bfa"} />
       </div>
 
-      <div style={{ display: "grid", gap: 10 }}>
+      {isUpcoming && (
+        <div style={{ padding: "10px 14px", background: "rgba(99,102,241,0.08)", borderRadius: 8,
+                      fontSize: 12, color: "var(--text-faint)", textAlign: "center", letterSpacing: 0.3 }}>
+          Trading opens when this market goes live
+        </div>
+      )}
+
+      <div style={{ display: "grid", gap: 10, opacity: isUpcoming ? 0.45 : 1 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
           <div style={{ flex: 1 }}>
             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 5 }}>
@@ -177,7 +187,7 @@ export default function Home({ onSelectContract, activeTab, onChangeTab }) {
   const [prevYes, setPrevYes] = useState({});
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [filter, setFilter] = useState("ALL"); // ALL | LIVE | CLOSED
+  const [filter, setFilter] = useState("ALL"); // ALL | UPCOMING | LIVE | CLOSED
 
   const load = async () => {
     try {
@@ -205,8 +215,10 @@ export default function Home({ onSelectContract, activeTab, onChangeTab }) {
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return contracts.filter((c) => {
-      if (filter === "LIVE" && c.is_open === false) return false;
-      if (filter === "CLOSED" && c.is_open !== false) return false;
+      const status = c.status ?? (c.is_open !== false ? "open" : "closed");
+      if (filter === "LIVE" && status !== "open") return false;
+      if (filter === "CLOSED" && status !== "closed") return false;
+      if (filter === "UPCOMING" && status !== "upcoming") return false;
       if (!q) return true;
       return (
         (c.contract_name || "").toLowerCase().includes(q) ||
@@ -216,7 +228,11 @@ export default function Home({ onSelectContract, activeTab, onChangeTab }) {
   }, [contracts, search, filter]);
 
   const openCount = useMemo(
-    () => contracts.filter((c) => c.is_open !== false).length,
+    () => contracts.filter((c) => (c.status ?? (c.is_open !== false ? "open" : "closed")) === "open").length,
+    [contracts]
+  );
+  const upcomingCount = useMemo(
+    () => contracts.filter((c) => c.status === "upcoming").length,
     [contracts]
   );
 
@@ -227,7 +243,7 @@ export default function Home({ onSelectContract, activeTab, onChangeTab }) {
       <div className="ksc-content-wrap">
 
       <div style={{ marginBottom: 14, color: "var(--text-faint)", fontSize: 12 }}>
-        {openCount} open contracts. Live contracts refresh automatically every 5s.
+        {openCount} live · {upcomingCount} upcoming. Auto-refreshes every 5s.
       </div>
 
       {/* SEARCH + FILTERS */}
@@ -239,8 +255,8 @@ export default function Home({ onSelectContract, activeTab, onChangeTab }) {
           onChange={(e) => setSearch(e.target.value)}
           style={{ flex: "1 1 280px", maxWidth: 420 }}
         />
-        <div className="ksc-toggle-row" style={{ minWidth: 280 }}>
-          {["ALL", "LIVE", "CLOSED"].map((f) => (
+        <div className="ksc-toggle-row" style={{ minWidth: 340 }}>
+          {["ALL", "UPCOMING", "LIVE", "CLOSED"].map((f) => (
             <button
               key={f}
               className={`ksc-toggle ${filter === f ? "active" : ""}`}
